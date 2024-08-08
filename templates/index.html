@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscar Música</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Buscar Música</h1>
+        <form action="" method="post" id="search-form">
+            <input type="text" name="query" placeholder="Introduce el nombre de un artista o canción" required>
+            <button type="submit">Buscar</button>
+        </form>
+        <div id="results" class="results"></div>
+    </div>
+</body>
+</html>
