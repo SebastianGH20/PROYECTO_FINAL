@@ -38,6 +38,10 @@ def collect_releases(artist_id):
 def index():
     return render_template('index.html')
 
+@app.route('/search_page')
+def search_page():
+    return render_template('search.html')
+
 # Ruta para manejar las búsquedas
 @app.route('/search', methods=['POST'])
 def search():

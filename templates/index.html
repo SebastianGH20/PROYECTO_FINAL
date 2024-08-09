@@ -1,20 +1,26 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscar Música</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <script src="{{ url_for('static', filename='main.js') }}" defer></script>
-</head>
-<body>
-    <div class="container">
-        <h1>Buscar Música</h1>
-        <form action="" method="post" id="search-form">
-            <input type="text" name="query" placeholder="Introduce el nombre de un artista o canción" required>
-            <button type="submit">Buscar</button>
-        </form>
-        <div id="results" class="results"></div>
+{% extends "layout.html" %}
+
+{% block title %}Inicio - Tu Página de Música{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h1>Descubre tu música</h1>
+    <p>Explora artistas, álbumes y canciones como nunca antes</p>
+    <a href="{{ url_for('search_page') }}" class="cta-button">Comenzar a buscar</a>
+</section>
+
+<section class="features">
+    <div class="feature">
+        <h2>Búsqueda avanzada</h2>
+        <p>Encuentra tu música favorita con nuestra potente herramienta de búsqueda</p>
     </div>
-</body>
-</html>
+    <div class="feature">
+        <h2>Descubre nuevos artistas</h2>
+        <p>Amplía tus horizontes musicales con recomendaciones personalizadas</p>
+    </div>
+    <div class="feature">
+        <h2>Análisis de gustos</h2>
+        <p>Obtén insights sobre tus preferencias musicales</p>
+    </div>
+</section>
+{% endblock %}
