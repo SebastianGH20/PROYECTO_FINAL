@@ -3,17 +3,19 @@
 {% block title %}Búsqueda - Tu Página de Música{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/search.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 {% endblock %}
 
 {% block content %}
 <section class="search-container">
     <h1>Busca tu música</h1>
     <form id="search-form">
-        <input type="text" id="search-input" placeholder="Artista, álbum o canción...">
+        <input type="text" id="search-input" placeholder="Artista, álbum o canción..." required>
         <button type="submit">Buscar</button>
     </form>
 </section>
+
+<div id="error-message" class="error-message"></div>
 
 <section id="results-container" class="results-container">
     <!-- Los resultados se cargarán aquí dinámicamente -->
