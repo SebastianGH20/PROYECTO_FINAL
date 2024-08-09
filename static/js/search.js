@@ -28,18 +28,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function displayResults(results) {
+    function displayResults(result) {
         resultsContainer.innerHTML = '';
-        results.forEach(result => {
-            const resultCard = document.createElement('div');
-            resultCard.classList.add('result-card');
-            resultCard.innerHTML = `
-                <h3>${result.artist}</h3>
-                <ul>
-                    ${result.releases.map(release => `<li>${release.title} (${release.date || 'N/A'})</li>`).join('')}
-                </ul>
-            `;
-            resultsContainer.appendChild(resultCard);
-        });
+        if (result.error) {
+            resultsContainer.innerHTML = `<p>${result.error}</p>`;
+            return;
+        }
+
+        const artistCard = document.createElement('div');
+        artistCard.classList.add('artist-card');
+        artistCard.innerHTML = `
+            <h2>${result.name}</h2>
+            <p><strong>Tipo:</strong> ${result.type}</p>
+            <p><strong>País:</strong> ${result.country}</p>
+            <p><strong>Período de actividad:</strong> ${result['life-span'].begin || 'Desconocido'} - ${result['life-span'].ended ? result['life-span'].end : 'Presente'}</p>
+            <p><strong>Géneros:</strong> ${result.genres.join(', ') || 'No especificado'}</p>
+            <h3>Lanzamientos recientes:</h3>
+            <ul>
+                ${result.releases.slice(0, 5).map(release => `<li>${release.title} (${release.date || 'Fecha desconocida'})</li>`).join('')}
+            </ul>
+            <h3>Enlaces oficiales:</h3>
+            <ul>
+                ${result.urls.map(url => `<li><a href="${url}" target="_blank">${url}</a></li>`).join('')}
+            </ul>
+        `;
+        resultsContainer.appendChild(artistCard);
     }
 });
