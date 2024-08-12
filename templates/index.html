@@ -3,24 +3,28 @@
 {% block title %}Inicio - Tu Página de Música{% endblock %}
 
 {% block content %}
-<section class="hero">
-    <h1>Descubre tu música</h1>
-    <p>Explora artistas, álbumes y canciones como nunca antes</p>
-    <a href="{{ url_for('search_page') }}" class="cta-button">Comenzar a buscar</a>
-</section>
+<div class="hero-section">
+    <h1>Bienvenido a Tu Página de Música</h1>
+    <p>Descubre artistas, explora su música y conoce su historia</p>
+</div>
 
-<section class="features">
+<div class="features-section">
     <div class="feature">
-        <h2>Búsqueda avanzada</h2>
-        <p>Encuentra tu música favorita con nuestra potente herramienta de búsqueda</p>
+        <h2>Búsqueda Inteligente</h2>
+        <p>Encuentra información detallada sobre tus artistas favoritos con nuestra potente herramienta de búsqueda.</p>
     </div>
     <div class="feature">
-        <h2>Descubre nuevos artistas</h2>
-        <p>Amplía tus horizontes musicales con recomendaciones personalizadas</p>
+        <h2>Línea de Tiempo Interactiva</h2>
+        <p>Explora la carrera de los artistas a través de una línea de tiempo visual e interactiva.</p>
     </div>
     <div class="feature">
-        <h2>Análisis de gustos</h2>
-        <p>Obtén insights sobre tus preferencias musicales</p>
+        <h2>Colaboraciones y Enlaces</h2>
+        <p>Descubre colaboraciones entre artistas y accede a enlaces relevantes para ampliar tu conocimiento musical.</p>
     </div>
-</section>
+</div>
+
+<div class="cta-section">
+    <h2>Comienza tu Viaje Musical</h2>
+    <a href="{{ url_for('search_page') }}" class="cta-button">Buscar Ahora</a>
+</div>
 {% endblock %}

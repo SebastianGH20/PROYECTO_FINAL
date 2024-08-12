@@ -6,6 +6,7 @@ from functools import lru_cache
 import logging
 import traceback
 import json
+from datetime import datetime
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -40,8 +41,12 @@ def fetch_data_cached(entity_type, params_tuple):
 
 def fetch_data(entity_type, params=None):
     params_tuple = params_to_tuple(params)
-    result = fetch_data_cached(entity_type, params_tuple)
-    return json.loads(result) if result else None  # Convertimos de vuelta a diccionario
+    try:
+        result = fetch_data_cached(entity_type, params_tuple)
+        return json.loads(result) if result else None
+    except json.JSONDecodeError:
+        app.logger.error(f"Error decoding JSON for {entity_type} with params {params}")
+        return None
 
 def search_artists(query):
     params = {'query': query, 'fmt': 'json'}
@@ -51,12 +56,27 @@ def search_artists(query):
     return None
 
 def get_artist_details(artist_id):
-    params = {'fmt': 'json', 'inc': 'releases+recordings+url-rels+artist-rels'}
-    return fetch_data(f'artist/{artist_id}', params=params)
+    params = {'fmt': 'json', 'inc': 'releases+recordings+url-rels+artist-rels+genres'}
+    return fetch_data(f'artist/{artist_id}', params=params) or {}
 
 def get_release_details(release_id):
-    params = {'fmt': 'json', 'inc': 'recordings'}
-    return fetch_data(f'release/{release_id}', params=params)
+    params = {'fmt': 'json', 'inc': 'recordings+artist-credits'}
+    return fetch_data(f'release/{release_id}', params=params) or {}
+
+def get_all_releases(artist_id):
+    offset = 0
+    limit = 100
+    all_releases = []
+    while True:
+        params = {'artist': artist_id, 'fmt': 'json', 'inc': 'genres', 'limit': limit, 'offset': offset}
+        data = fetch_data('release', params=params)
+        if not data or not data.get('releases'):
+            break
+        all_releases.extend(data['releases'])
+        if len(data['releases']) < limit:
+            break
+        offset += limit
+    return all_releases
 
 @app.route('/')
 def index():
@@ -73,6 +93,7 @@ def search():
     
     try:
         artist = search_artists(query)
+        app.logger.info(f"Artist search result: {artist}")
         
         if not artist:
             app.logger.info(f"No results found for: {query}")
@@ -80,34 +101,75 @@ def search():
         
         app.logger.info(f"Artist found: {artist['name']}")
         artist_details = get_artist_details(artist['id'])
+        app.logger.info(f"Artist details: {artist_details}")
         
-        releases = artist_details.get('releases', [])
-        detailed_releases = []
-        for release in releases[:10]:
-            release_details = get_release_details(release['id'])
-            detailed_releases.append({
-                'id': release['id'],
-                'title': release['title'],
-                'date': release.get('date', 'Unknown'),
-                'type': release.get('release-group', {}).get('primary-type', 'Unknown'),
-                'track_count': len(release_details.get('media', [{}])[0].get('tracks', []))
-            })
+        if not artist_details:
+            app.logger.error(f"Failed to get artist details for {artist['name']}")
+            return jsonify({"error": "No se pudieron obtener los detalles del artista."}), 500
         
-        related_artists = [
-            {'id': rel['artist']['id'], 'name': rel['artist']['name']}
-            for rel in artist_details.get('relations', [])
-            if rel['type'] in ['collaboration', 'member of band']
-        ]
+        all_releases = get_all_releases(artist['id'])
+        app.logger.info(f"Number of releases found: {len(all_releases)}")
         
+        timeline_events = []
+        collaborations = set()
+        genres_evolution = {}
+        event_id = 1  # Inicializamos un contador para los IDs de eventos
+
+        for release in all_releases:
+            release_date = release.get('date')
+            if release_date:
+                try:
+                    release_date = datetime.strptime(release_date, "%Y-%m-%d").strftime("%Y-%m-%d")
+                except ValueError:
+                    try:
+                        release_date = datetime.strptime(release_date, "%Y-%m").strftime("%Y-%m")
+                    except ValueError:
+                        release_date = datetime.strptime(release_date, "%Y").strftime("%Y")
+
+                timeline_events.append({
+                    'id': f'event_{event_id}',  # Asignamos un ID único
+                    'date': release_date,
+                    'type': 'release',
+                    'title': release['title'],
+                    'release_id': release['id']
+                })
+                event_id += 1  # Incrementamos el contador
+
+                # Géneros del lanzamiento
+                release_genres = [genre['name'] for genre in release.get('genres', [])]
+                for genre in release_genres:
+                    if genre not in genres_evolution:
+                        genres_evolution[genre] = []
+                    genres_evolution[genre].append(release_date)
+
+                # Colaboraciones
+                release_details = get_release_details(release['id'])
+                if release_details:
+                    for artist_credit in release_details.get('artist-credit', []):
+                        if 'artist' in artist_credit and artist_credit['artist']['id'] != artist['id']:
+                            collaborations.add((artist_credit['artist']['id'], artist_credit['artist']['name']))
+                            timeline_events.append({
+                                'id': f'event_{event_id}',  # Asignamos un ID único
+                                'date': release_date,
+                                'type': 'collaboration',
+                                'title': f"Colaboración con {artist_credit['artist']['name']}",
+                                'artist_id': artist_credit['artist']['id']
+                            })
+                            event_id += 1  # Incrementamos el contador
+
+        # Ordenar eventos cronológicamente
+        timeline_events.sort(key=lambda x: x['date'])
+
         result = {
             'name': artist['name'],
             'type': artist.get('type', 'Unknown'),
             'country': artist.get('country', 'Unknown'),
             'life-span': artist.get('life-span', {}),
-            'genres': [genre['name'] for genre in artist.get('genres', [])],
-            'releases': detailed_releases,
+            'genres': [genre['name'] for genre in artist_details.get('genres', [])],
+            'timeline_events': timeline_events,
+            'collaborations': list(collaborations),
+            'genres_evolution': genres_evolution,
             'urls': [url['url']['resource'] for url in artist_details.get('relations', []) if url['type'] == 'official homepage'],
-            'related_artists': related_artists[:5]
         }
         
         return jsonify(result)

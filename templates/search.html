@@ -2,26 +2,21 @@
 
 {% block title %}Búsqueda - Tu Página de Música{% endblock %}
 
-{% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-{% endblock %}
-
 {% block content %}
-<section class="search-container">
-    <h1>Busca tu música</h1>
+<div class="search-container">
+    <h1>Explora el Mundo de la Música</h1>
     <form id="search-form">
-        <input type="text" id="search-input" placeholder="Artista, álbum o canción..." required>
+        <input type="text" id="search-input" placeholder="Busca por artista, álbum o canción..." required>
         <button type="submit">Buscar</button>
     </form>
-</section>
+</div>
 
 <div id="error-message" class="error-message"></div>
 
-<section id="results-container" class="results-container">
-    <!-- Los resultados se cargarán aquí dinámicamente -->
-</section>
+<div id="results-container"></div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>
 <script src="{{ url_for('static', filename='js/search.js') }}"></script>
 {% endblock %}
