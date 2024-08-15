@@ -7,9 +7,18 @@ import logging
 import traceback
 import json
 from datetime import datetime
+import pandas as pd
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
+
+# Cargar el dataset FMA
+try:
+    fma_dataset = pd.read_csv('combined_fma_dataset.csv')
+    app.logger.info("FMA dataset loaded successfully")
+except Exception as e:
+    app.logger.error(f"Error loading FMA dataset: {str(e)}")
+    fma_dataset = None
 
 # Cargar el modelo
 def load_model():
@@ -92,8 +101,38 @@ def search():
     app.logger.info(f"Searching for: {query}")
     
     try:
+        # Primero, buscar en el dataset FMA
+        if fma_dataset is not None:
+            results = fma_dataset[fma_dataset['title'].str.contains(query, case=False, na=False) | 
+                                  fma_dataset['artist_name'].str.contains(query, case=False, na=False)]
+            
+            if not results.empty:
+                app.logger.info(f"Results found in FMA dataset for: {query}")
+                first_result = results.iloc[0]
+                
+                result = {
+                    'name': first_result['artist_name'],
+                    'type': 'Artist',
+                    'country': 'Unknown',
+                    'life-span': {'begin': 'Unknown', 'end': 'Unknown'},
+                    'genres': [first_result['genre_top']],
+                    'timeline_events': [
+                        {
+                            'id': f"event_{i}",
+                            'title': row['title'],
+                            'date': row['track_date'],
+                            'type': 'release'
+                        } for i, row in results.iterrows()
+                    ],
+                    'collaborations': [],
+                    'urls': []
+                }
+                
+                return jsonify(result)
+        
+        # Si no se encuentra en FMA o FMA no está disponible, buscar en MusicBrainz
         artist = search_artists(query)
-        app.logger.info(f"Artist search result: {artist}")
+        app.logger.info(f"Artist search result from MusicBrainz: {artist}")
         
         if not artist:
             app.logger.info(f"No results found for: {query}")
@@ -113,7 +152,7 @@ def search():
         timeline_events = []
         collaborations = set()
         genres_evolution = {}
-        event_id = 1  # Inicializamos un contador para los IDs de eventos
+        event_id = 1
 
         for release in all_releases:
             release_date = release.get('date')
@@ -127,37 +166,34 @@ def search():
                         release_date = datetime.strptime(release_date, "%Y").strftime("%Y")
 
                 timeline_events.append({
-                    'id': f'event_{event_id}',  # Asignamos un ID único
+                    'id': f'event_{event_id}',
                     'date': release_date,
                     'type': 'release',
                     'title': release['title'],
                     'release_id': release['id']
                 })
-                event_id += 1  # Incrementamos el contador
+                event_id += 1
 
-                # Géneros del lanzamiento
                 release_genres = [genre['name'] for genre in release.get('genres', [])]
                 for genre in release_genres:
                     if genre not in genres_evolution:
                         genres_evolution[genre] = []
                     genres_evolution[genre].append(release_date)
 
-                # Colaboraciones
                 release_details = get_release_details(release['id'])
                 if release_details:
                     for artist_credit in release_details.get('artist-credit', []):
                         if 'artist' in artist_credit and artist_credit['artist']['id'] != artist['id']:
                             collaborations.add((artist_credit['artist']['id'], artist_credit['artist']['name']))
                             timeline_events.append({
-                                'id': f'event_{event_id}',  # Asignamos un ID único
+                                'id': f'event_{event_id}',
                                 'date': release_date,
                                 'type': 'collaboration',
                                 'title': f"Colaboración con {artist_credit['artist']['name']}",
                                 'artist_id': artist_credit['artist']['id']
                             })
-                            event_id += 1  # Incrementamos el contador
+                            event_id += 1
 
-        # Ordenar eventos cronológicamente
         timeline_events.sort(key=lambda x: x['date'])
 
         result = {
